@@ -3,6 +3,7 @@ import { Post } from '@prisma/client';
 import logger from '../config/logger';
 import xApiService from './x-api.service';
 import postSuggestionService from './post-suggestion.service';
+import safetyService from './safety.service';
 
 export class PostService {
   async createFromSuggestion(suggestionId: string): Promise<Post> {
@@ -14,6 +15,14 @@ export class PostService {
 
       if (suggestion.status !== 'approved') {
         throw new Error('Suggestion must be approved before posting');
+      }
+
+      // Final safety check before posting
+      const safetyCheck = await safetyService.checkContent(suggestion.content);
+      if (!safetyCheck.safe && safetyCheck.riskScore >= 70) {
+        throw new Error(
+          `Content failed safety check. Risk score: ${safetyCheck.riskScore}. Reasons: ${safetyCheck.reasons.join(', ')}`
+        );
       }
 
       // Post to X

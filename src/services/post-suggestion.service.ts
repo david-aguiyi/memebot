@@ -2,6 +2,7 @@ import prisma from '../config/database';
 import { PostSuggestion } from '@prisma/client';
 import logger from '../config/logger';
 import aiService, { PostVariant } from './ai.service';
+import safetyService from './safety.service';
 
 export class PostSuggestionService {
   async generateSuggestions(projectId: string): Promise<PostSuggestion> {
@@ -29,14 +30,25 @@ export class PostSuggestionService {
       const primaryContent = variants[0].content;
       const otherVariants = variants.slice(1).map((v) => v.content);
 
-      // Create suggestion
+      // Safety check
+      const safetyCheck = await safetyService.checkContent(primaryContent);
+      const requiresReview = await safetyService.requiresHumanReview(primaryContent);
+
+      // Create suggestion with safety metadata
       const suggestion = await prisma.postSuggestion.create({
         data: {
           projectId,
           contextVersion,
           content: primaryContent,
           variants: otherVariants,
-          status: 'pending',
+          status: requiresReview ? 'pending_review' : 'pending',
+          metadata: {
+            safetyCheck: {
+              riskScore: safetyCheck.riskScore,
+              safe: safetyCheck.safe,
+              reasons: safetyCheck.reasons,
+            },
+          },
         },
       });
 
