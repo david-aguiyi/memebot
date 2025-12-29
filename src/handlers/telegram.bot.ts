@@ -8,6 +8,7 @@ import contextService from '../services/context.service';
 import postSuggestionService from '../services/post-suggestion.service';
 import postService from '../services/post.service';
 import { postingQueue } from '../jobs/posting.job';
+import { TelegramFormatter } from '../utils/telegram-formatter';
 import { AppError } from '../middleware/errorHandler';
 
 export class TelegramBot {
@@ -240,12 +241,12 @@ Use inline buttons to interact with suggestions.
         return;
       }
 
-      const contextText = contextLayers
-        .map((layer, i) => `*Version ${layer.version}:*\n${layer.content}`)
-        .join('\n\n---\n\n');
+      const message = TelegramFormatter.formatContextSummary(
+        contextLayers.map((l) => ({ version: l.version, content: l.content }))
+      );
 
       await ctx.reply(
-        `📝 *Active Context for ${project.name}:*\n\n${contextText}`,
+        `📝 *Active Context for ${project.name}:*\n\n${message}`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {
@@ -391,14 +392,17 @@ Use inline buttons to interact with suggestions.
         suggestion.id
       );
 
-      // Format message with variants
+      // Format message with enhanced UX
       const variants = suggestion.variants as string[] | null;
-      const allVariants = [suggestion.content, ...(variants || [])];
+      const metadata = suggestion.metadata as { safetyCheck?: { riskScore?: number } } | null;
+      const riskScore = metadata?.safetyCheck?.riskScore;
 
-      let message = `📝 *Post Suggestions for ${project.name}:*\n\n`;
-      allVariants.forEach((variant, index) => {
-        message += `*Variant ${index + 1}:*\n${variant}\n\n`;
-      });
+      const message = TelegramFormatter.formatSuggestionCard(
+        suggestion.content,
+        variants,
+        riskScore,
+        suggestion.contextVersion
+      );
 
       // Delete generating message and send result
       await ctx.telegram.deleteMessage(ctx.chat!.id, generatingMsg.message_id);

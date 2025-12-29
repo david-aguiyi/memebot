@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import xApiService from './x-api.service';
 import postSuggestionService from './post-suggestion.service';
 import safetyService from './safety.service';
+import notificationService from './notification.service';
 
 export class PostService {
   async createFromSuggestion(suggestionId: string): Promise<Post> {
@@ -50,6 +51,13 @@ export class PostService {
       logger.info('Post created and published', {
         postId: post.id,
         tweetId: tweet.id,
+      });
+
+      // Notify admins
+      await notificationService.notifyPostPublished({
+        content: post.content,
+        xTweetId: post.xTweetId || undefined,
+        postedAt: post.postedAt || undefined,
       });
 
       return post;
