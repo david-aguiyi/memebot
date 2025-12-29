@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import adminService from '../services/admin.service';
 import auditService from '../services/audit.service';
 import projectService from '../services/project.service';
+import contextService from '../services/context.service';
 import { AppError } from '../middleware/errorHandler';
 
 export class TelegramBot {
@@ -148,6 +149,21 @@ Use inline buttons to interact with suggestions.
     this.bot.action(/^regenerate:(.+)$/, async (ctx) => {
       await ctx.answerCbQuery('Regenerate functionality coming soon');
     });
+
+    // Context approval callbacks
+    this.bot.action(/^context_approve:(.+):(.+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      const projectId = ctx.match[1];
+      const version = parseInt(ctx.match[2]);
+      await this.handleContextApproveAction(ctx, projectId, version);
+    });
+
+    this.bot.action(/^context_reject:(.+):(.+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      const projectId = ctx.match[1];
+      const version = parseInt(ctx.match[2]);
+      await this.handleContextRejectAction(ctx, projectId, version);
+    });
   }
 
   private setupErrorHandling() {
@@ -165,7 +181,6 @@ Use inline buttons to interact with suggestions.
   // Command handlers
   private async handlePostingToggle(ctx: Context, enabled: boolean) {
     try {
-      // TODO: Implement project selection (for now, use first project)
       const projects = await projectService.findAll();
       if (projects.length === 0) {
         await ctx.reply('❌ No projects found. Create a project first.');
@@ -208,8 +223,28 @@ Use inline buttons to interact with suggestions.
 
   private async handleContextView(ctx: Context) {
     try {
-      // TODO: Implement context viewing
-      await ctx.reply('📝 Context viewing will be implemented in Sprint 3');
+      const projects = await projectService.findAll();
+      if (projects.length === 0) {
+        await ctx.reply('❌ No projects found.');
+        return;
+      }
+
+      const project = projects[0];
+      const contextLayers = await contextService.getActiveContext(project.id);
+
+      if (contextLayers.length === 0) {
+        await ctx.reply('📝 No approved context layers found.');
+        return;
+      }
+
+      const contextText = contextLayers
+        .map((layer, i) => `*Version ${layer.version}:*\n${layer.content}`)
+        .join('\n\n---\n\n');
+
+      await ctx.reply(
+        `📝 *Active Context for ${project.name}:*\n\n${contextText}`,
+        { parse_mode: 'Markdown' }
+      );
     } catch (error) {
       logger.error('Failed to view context', error);
       await ctx.reply('❌ Failed to view context.');
@@ -227,8 +262,28 @@ Use inline buttons to interact with suggestions.
         return;
       }
 
-      // TODO: Implement context addition in Sprint 3
-      await ctx.reply('📝 Context addition will be implemented in Sprint 3');
+      const projects = await projectService.findAll();
+      if (projects.length === 0) {
+        await ctx.reply('❌ No projects found. Create a project first.');
+        return;
+      }
+
+      const project = projects[0];
+      const contextLayer = await contextService.addContext(project.id, text);
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'context_added',
+        { projectId: project.id, version: contextLayer.version },
+        'context_layer',
+        contextLayer.id
+      );
+
+      await ctx.reply(
+        `✅ Context layer added (Version ${contextLayer.version})\n\n` +
+        `Status: ⏳ Pending approval\n\n` +
+        `Use /context_approve ${contextLayer.version} to approve.`
+      );
     } catch (error) {
       logger.error('Failed to add context', error);
       await ctx.reply('❌ Failed to add context.');
@@ -237,18 +292,72 @@ Use inline buttons to interact with suggestions.
 
   private async handleContextApprove(ctx: Context) {
     try {
-      // TODO: Implement context approval in Sprint 3
-      await ctx.reply('📝 Context approval will be implemented in Sprint 3');
+      const text = ctx.message && 'text' in ctx.message
+        ? ctx.message.text.replace('/context_approve', '').trim()
+        : '';
+
+      const version = parseInt(text);
+      if (isNaN(version)) {
+        await ctx.reply('❌ Please provide a version number.\nUsage: /context_approve <version>');
+        return;
+      }
+
+      const projects = await projectService.findAll();
+      if (projects.length === 0) {
+        await ctx.reply('❌ No projects found.');
+        return;
+      }
+
+      const project = projects[0];
+      const contextLayer = await contextService.approveContext(
+        project.id,
+        version,
+        BigInt(ctx.from!.id)
+      );
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'context_approved',
+        { projectId: project.id, version },
+        'context_layer',
+        contextLayer.id
+      );
+
+      await ctx.reply(`✅ Context layer version ${version} approved!`);
     } catch (error) {
       logger.error('Failed to approve context', error);
-      await ctx.reply('❌ Failed to approve context.');
+      await ctx.reply('❌ Failed to approve context. Check if version exists.');
     }
   }
 
   private async handleContextRevert(ctx: Context) {
     try {
-      // TODO: Implement context revert in Sprint 3
-      await ctx.reply('📝 Context revert will be implemented in Sprint 3');
+      const text = ctx.message && 'text' in ctx.message
+        ? ctx.message.text.replace('/context_revert', '').trim()
+        : '';
+
+      const version = parseInt(text);
+      if (isNaN(version)) {
+        await ctx.reply('❌ Please provide a version number.\nUsage: /context_revert <version>');
+        return;
+      }
+
+      const projects = await projectService.findAll();
+      if (projects.length === 0) {
+        await ctx.reply('❌ No projects found.');
+        return;
+      }
+
+      const project = projects[0];
+      await contextService.revertToVersion(project.id, version);
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'context_reverted',
+        { projectId: project.id, targetVersion: version }
+      );
+
+      await ctx.reply(`✅ Reverted to context version ${version}`);
     } catch (error) {
       logger.error('Failed to revert context', error);
       await ctx.reply('❌ Failed to revert context.');
@@ -304,6 +413,39 @@ Use inline buttons to interact with suggestions.
     }
   }
 
+  private async handleContextApproveAction(ctx: Context, projectId: string, version: number) {
+    try {
+      const contextLayer = await contextService.approveContext(
+        projectId,
+        version,
+        BigInt(ctx.from!.id)
+      );
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'context_approved',
+        { projectId, version },
+        'context_layer',
+        contextLayer.id
+      );
+
+      await ctx.editMessageText(`✅ Context layer version ${version} approved!`);
+    } catch (error) {
+      logger.error('Failed to approve context via action', error);
+      await ctx.answerCbQuery('❌ Failed to approve');
+    }
+  }
+
+  private async handleContextRejectAction(ctx: Context, projectId: string, version: number) {
+    try {
+      await contextService.rejectContext(projectId, version);
+      await ctx.editMessageText(`❌ Context layer version ${version} rejected.`);
+    } catch (error) {
+      logger.error('Failed to reject context via action', error);
+      await ctx.answerCbQuery('❌ Failed to reject');
+    }
+  }
+
   // Utility method to create inline keyboard for suggestions
   createSuggestionKeyboard(suggestionId: string) {
     return Markup.inlineKeyboard([
@@ -345,4 +487,3 @@ Use inline buttons to interact with suggestions.
 }
 
 export default new TelegramBot();
-
