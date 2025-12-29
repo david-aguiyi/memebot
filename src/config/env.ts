@@ -10,11 +10,12 @@ const envSchema = z.object({
   // Telegram
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   
-  // X (Twitter)
-  X_API_KEY: z.string().min(1),
-  X_API_SECRET: z.string().min(1),
-  X_ACCESS_TOKEN: z.string().min(1),
-  X_ACCESS_TOKEN_SECRET: z.string().min(1),
+  // X (Twitter) - Optional, can use simulation mode
+  X_API_KEY: z.string().optional(),
+  X_API_SECRET: z.string().optional(),
+  X_ACCESS_TOKEN: z.string().optional(),
+  X_ACCESS_TOKEN_SECRET: z.string().optional(),
+  X_SIMULATION_MODE: z.string().transform((val) => val === 'true').default('false'),
   
   // OpenAI
   OPENAI_API_KEY: z.string().min(1),

@@ -457,9 +457,16 @@ Use inline buttons to interact with suggestions.
       const project = await projectService.findById(suggestion.projectId);
       const willAutoPost = project?.postingEnabled || false;
 
+      const xApiService = (await import('../services/x-api.service')).default;
+      const isSimulation = xApiService.isSimulationMode();
+      
       let message = `✅ Post suggestion approved!\n\n${suggestion.content}\n\n`;
       if (willAutoPost) {
-        message += `🔄 Will be posted automatically to X/Twitter.`;
+        if (isSimulation) {
+          message += `📝 Will be posted (SIMULATION MODE - not actually posted to X/Twitter)`;
+        } else {
+          message += `🔄 Will be posted automatically to X/Twitter.`;
+        }
         // Add to posting queue
         await postingQueue.add({
           suggestionId: suggestion.id,

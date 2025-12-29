@@ -31,12 +31,15 @@ export class NotificationService {
     }
   }
 
-  async notifyPostPublished(post: {
-    content: string;
-    xTweetId?: string;
-    postedAt?: Date;
-  }) {
-    const message = TelegramFormatter.formatPostNotification(post);
+  async notifyPostPublished(
+    post: {
+      content: string;
+      xTweetId?: string;
+      postedAt?: Date;
+    },
+    isSimulation = false
+  ) {
+    const message = TelegramFormatter.formatPostNotification(post, isSimulation);
     await this.notifyAdmins(message);
   }
 

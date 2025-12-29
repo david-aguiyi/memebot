@@ -61,13 +61,20 @@ export class TelegramFormatter {
   }
 
   static formatPostNotification(
-    post: { content: string; xTweetId?: string; postedAt?: Date }
+    post: { content: string; xTweetId?: string; postedAt?: Date },
+    isSimulation = false
   ): string {
-    let message = '✅ *Post Published*\n\n';
+    const prefix = isSimulation ? '📝 *[SIMULATION] Post Would Be Published*' : '✅ *Post Published*';
+    let message = `${prefix}\n\n`;
     message += `${post.content}\n\n`;
 
     if (post.xTweetId) {
-      message += `🔗 https://twitter.com/i/web/status/${post.xTweetId}`;
+      if (isSimulation) {
+        message += `🔗 Simulated Tweet ID: ${post.xTweetId}\n`;
+        message += `ℹ️ Running in simulation mode - not posted to X/Twitter`;
+      } else {
+        message += `🔗 https://twitter.com/i/web/status/${post.xTweetId}`;
+      }
     }
 
     if (post.postedAt) {

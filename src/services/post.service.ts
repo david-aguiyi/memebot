@@ -5,6 +5,7 @@ import xApiService from './x-api.service';
 import postSuggestionService from './post-suggestion.service';
 import safetyService from './safety.service';
 import notificationService from './notification.service';
+import logger from '../config/logger';
 
 export class PostService {
   async createFromSuggestion(suggestionId: string): Promise<Post> {
@@ -26,7 +27,12 @@ export class PostService {
         );
       }
 
-      // Post to X
+      // Post to X (or simulate)
+      const isSimulation = xApiService.isSimulationMode();
+      if (isSimulation) {
+        logger.info('📝 Running in simulation mode - post will not be published to X/Twitter');
+      }
+      
       const tweet = await xApiService.postTweet(suggestion.content);
 
       // Create post record
@@ -58,7 +64,7 @@ export class PostService {
         content: post.content,
         xTweetId: post.xTweetId || undefined,
         postedAt: post.postedAt || undefined,
-      });
+      }, xApiService.isSimulationMode());
 
       return post;
     } catch (error) {
@@ -98,13 +104,15 @@ export class PostService {
         throw new Error('Post not found');
       }
 
-      // Delete from X if tweet ID exists
-      if (post.xTweetId) {
+      // Delete from X if tweet ID exists (skip in simulation mode)
+      if (post.xTweetId && !xApiService.isSimulationMode()) {
         try {
           await xApiService.deleteTweet(post.xTweetId);
         } catch (error) {
           logger.warn('Failed to delete tweet from X, continuing with DB deletion', error);
         }
+      } else if (post.xTweetId && xApiService.isSimulationMode()) {
+        logger.info('📝 [SIMULATION] Would delete tweet:', { tweetId: post.xTweetId });
       }
 
       // Update status
