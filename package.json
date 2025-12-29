@@ -16,7 +16,8 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "setup-admin": "ts-node scripts/setup-admin.ts"
   },
   "keywords": [
     "telegram",
