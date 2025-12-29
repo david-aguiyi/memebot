@@ -59,3 +59,5 @@ credentials/
 .cache/
 *.cache
 
+# Prisma
+prisma/migrations/

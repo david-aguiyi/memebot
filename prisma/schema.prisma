@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  name            String   @db.VarChar(255)
+  baseDescription String   @db.Text
+  personaConfig   Json?
+  postingEnabled  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contextLayers    ContextLayer[]
+  postSuggestions PostSuggestion[]
+  posts           Post[]
+
+  @@index([name])
+  @@index([postingEnabled])
+  @@map("projects")
+}
+
+model ContextLayer {
+  id          String   @id @default(uuid())
+  projectId   String
+  version     Int
+  content     String   @db.Text
+  metadata    Json?
+  status      String   @default("pending") @db.VarChar(50)
+  approvedBy  BigInt?
+  approvedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  postSuggestions PostSuggestion[]
+  posts           Post[]
+
+  @@unique([projectId, version])
+  @@index([status])
+  @@index([createdAt])
+  @@map("context_layers")
+}
+
+model PostSuggestion {
+  id             String   @id @default(uuid())
+  projectId      String
+  contextVersion Int
+  content        String   @db.Text
+  variants       Json?
+  status         String   @default("pending") @db.VarChar(50)
+  approvedBy     BigInt?
+  createdAt      DateTime @default(now())
+  approvedAt     DateTime?
+
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contextLayer  ContextLayer @relation(fields: [projectId, contextVersion], references: [projectId, version])
+  posts         Post[]
+
+  @@index([projectId, status])
+  @@index([createdAt])
+  @@map("post_suggestions")
+}
+
+model Post {
+  id             String   @id @default(uuid())
+  projectId      String
+  contextVersion Int
+  suggestionId   String?
+  xTweetId       String?  @unique @db.VarChar(50)
+  content        String   @db.Text
+  status         String   @default("posted") @db.VarChar(50)
+  postedAt       DateTime?
+  createdAt      DateTime @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contextLayer ContextLayer  @relation(fields: [projectId, contextVersion], references: [projectId, version])
+  suggestion   PostSuggestion? @relation(fields: [suggestionId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, postedAt])
+  @@index([status])
+  @@map("posts")
+}
+
+model Admin {
+  telegramUserId BigInt  @id
+  username       String? @db.VarChar(255)
+  role           String  @default("admin") @db.VarChar(50)
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  contextLayers   ContextLayer[]
+  postSuggestions PostSuggestion[]
+  auditLogs       AuditLog[]
+
+  @@index([role])
+  @@index([isActive])
+  @@map("admins")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  adminId      BigInt
+  actionType   String   @db.VarChar(100)
+  actionData   Json?
+  resourceType String?  @db.VarChar(50)
+  resourceId   String?
+  createdAt    DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [telegramUserId])
+
+  @@index([adminId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+

@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: memebot-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://memebot:memebot@postgres:5432/memebot?schema=public
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./src:/app/src
+      - ./dist:/app/dist
+    networks:
+      - memebot-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: memebot-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=memebot
+      - POSTGRES_PASSWORD=memebot
+      - POSTGRES_DB=memebot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - memebot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: memebot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - memebot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Development service with hot reload
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: memebot-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://memebot:memebot@postgres:5432/memebot?schema=public
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./node_modules:/app/node_modules
+    networks:
+      - memebot-network
+    profiles:
+      - dev
+
+networks:
+  memebot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
