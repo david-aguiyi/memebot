@@ -5,6 +5,7 @@ import adminService from '../services/admin.service';
 import auditService from '../services/audit.service';
 import projectService from '../services/project.service';
 import contextService from '../services/context.service';
+import postSuggestionService from '../services/post-suggestion.service';
 import { AppError } from '../middleware/errorHandler';
 
 export class TelegramBot {
@@ -366,11 +367,46 @@ Use inline buttons to interact with suggestions.
 
   private async handleSuggestPost(ctx: Context) {
     try {
-      // TODO: Implement post suggestion in Sprint 4
-      await ctx.reply('🤖 Post suggestion generation will be implemented in Sprint 4');
+      const projects = await projectService.findAll();
+      if (projects.length === 0) {
+        await ctx.reply('❌ No projects found. Create a project first.');
+        return;
+      }
+
+      const project = projects[0];
+
+      // Show generating message
+      const generatingMsg = await ctx.reply('🤖 Generating post suggestions...');
+
+      // Generate suggestions
+      const suggestion = await postSuggestionService.generateSuggestions(project.id);
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'post_suggestion_generated',
+        { projectId: project.id, suggestionId: suggestion.id },
+        'post_suggestion',
+        suggestion.id
+      );
+
+      // Format message with variants
+      const variants = suggestion.variants as string[] | null;
+      const allVariants = [suggestion.content, ...(variants || [])];
+
+      let message = `📝 *Post Suggestions for ${project.name}:*\n\n`;
+      allVariants.forEach((variant, index) => {
+        message += `*Variant ${index + 1}:*\n${variant}\n\n`;
+      });
+
+      // Delete generating message and send result
+      await ctx.telegram.deleteMessage(ctx.chat!.id, generatingMsg.message_id);
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        ...this.createSuggestionKeyboard(suggestion.id),
+      });
     } catch (error) {
       logger.error('Failed to suggest post', error);
-      await ctx.reply('❌ Failed to generate post suggestions.');
+      await ctx.reply('❌ Failed to generate post suggestions. Please try again.');
     }
   }
 
@@ -395,8 +431,26 @@ Use inline buttons to interact with suggestions.
 
   private async handleSuggestionApprove(ctx: Context, suggestionId: string) {
     try {
-      // TODO: Implement suggestion approval in Sprint 4
-      await ctx.editMessageText('✅ Approval will be implemented in Sprint 4');
+      const suggestion = await postSuggestionService.findById(suggestionId);
+      if (!suggestion) {
+        await ctx.answerCbQuery('❌ Suggestion not found');
+        return;
+      }
+
+      await postSuggestionService.approve(suggestionId, BigInt(ctx.from!.id));
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'post_suggestion_approved',
+        { suggestionId },
+        'post_suggestion',
+        suggestionId
+      );
+
+      await ctx.editMessageText(
+        `✅ Post suggestion approved!\n\n${suggestion.content}\n\n` +
+        `Ready to post to X/Twitter.`
+      );
     } catch (error) {
       logger.error('Failed to approve suggestion', error);
       await ctx.answerCbQuery('❌ Failed to approve');
@@ -405,8 +459,17 @@ Use inline buttons to interact with suggestions.
 
   private async handleSuggestionReject(ctx: Context, suggestionId: string) {
     try {
-      // TODO: Implement suggestion rejection in Sprint 4
-      await ctx.editMessageText('❌ Rejection will be implemented in Sprint 4');
+      await postSuggestionService.reject(suggestionId);
+
+      await auditService.log(
+        BigInt(ctx.from!.id),
+        'post_suggestion_rejected',
+        { suggestionId },
+        'post_suggestion',
+        suggestionId
+      );
+
+      await ctx.editMessageText('❌ Post suggestion rejected.');
     } catch (error) {
       logger.error('Failed to reject suggestion', error);
       await ctx.answerCbQuery('❌ Failed to reject');
