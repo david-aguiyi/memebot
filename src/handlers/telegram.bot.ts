@@ -6,6 +6,8 @@ import auditService from '../services/audit.service';
 import projectService from '../services/project.service';
 import contextService from '../services/context.service';
 import postSuggestionService from '../services/post-suggestion.service';
+import postService from '../services/post.service';
+import { postingQueue } from '../jobs/posting.job';
 import { AppError } from '../middleware/errorHandler';
 
 export class TelegramBot {
@@ -447,10 +449,23 @@ Use inline buttons to interact with suggestions.
         suggestionId
       );
 
-      await ctx.editMessageText(
-        `✅ Post suggestion approved!\n\n${suggestion.content}\n\n` +
-        `Ready to post to X/Twitter.`
-      );
+      // Check if autonomous posting is enabled
+      const project = await projectService.findById(suggestion.projectId);
+      const willAutoPost = project?.postingEnabled || false;
+
+      let message = `✅ Post suggestion approved!\n\n${suggestion.content}\n\n`;
+      if (willAutoPost) {
+        message += `🔄 Will be posted automatically to X/Twitter.`;
+        // Add to posting queue
+        await postingQueue.add({
+          suggestionId: suggestion.id,
+          projectId: suggestion.projectId,
+        });
+      } else {
+        message += `⚠️ Autonomous posting is disabled. Enable with /posting_on to auto-post.`;
+      }
+
+      await ctx.editMessageText(message);
     } catch (error) {
       logger.error('Failed to approve suggestion', error);
       await ctx.answerCbQuery('❌ Failed to approve');
