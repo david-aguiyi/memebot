@@ -1,6 +1,8 @@
 import express from 'express';
 import logger from './config/logger';
 import env from './config/env';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import projectRoutes from './routes/projects.routes';
 
 const app = express();
 
@@ -12,6 +14,13 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// API routes
+app.use('/api/projects', projectRoutes);
+
+// Error handling (must be last)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Start server
 const PORT = env.PORT;
@@ -31,4 +40,3 @@ process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully...');
   process.exit(0);
 });
-
