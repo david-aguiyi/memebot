@@ -1,6 +1,5 @@
 import prisma from '../config/database';
 import { Post } from '@prisma/client';
-import logger from '../config/logger';
 import xApiService from './x-api.service';
 import postSuggestionService from './post-suggestion.service';
 import safetyService from './safety.service';
@@ -32,7 +31,7 @@ export class PostService {
       if (isSimulation) {
         logger.info('📝 Running in simulation mode - post will not be published to X/Twitter');
       }
-      
+
       const tweet = await xApiService.postTweet(suggestion.content);
 
       // Create post record
@@ -60,11 +59,14 @@ export class PostService {
       });
 
       // Notify admins
-      await notificationService.notifyPostPublished({
-        content: post.content,
-        xTweetId: post.xTweetId || undefined,
-        postedAt: post.postedAt || undefined,
-      }, xApiService.isSimulationMode());
+      await notificationService.notifyPostPublished(
+        {
+          content: post.content,
+          xTweetId: post.xTweetId || undefined,
+          postedAt: post.postedAt || undefined,
+        },
+        xApiService.isSimulationMode()
+      );
 
       return post;
     } catch (error) {
@@ -131,7 +133,7 @@ export class PostService {
   async getPostingQueue(projectId: string): Promise<Post[]> {
     // Get approved suggestions that haven't been posted yet
     const suggestions = await postSuggestionService.findPending(projectId);
-    const approvedSuggestions = suggestions.filter((s) => s.status === 'approved');
+    const approvedSuggestions = suggestions.filter(s => s.status === 'approved');
 
     // Return posts that would be created from these suggestions
     // (This is a simplified version - in production, you'd use a proper queue)
@@ -140,4 +142,3 @@ export class PostService {
 }
 
 export default new PostService();
-

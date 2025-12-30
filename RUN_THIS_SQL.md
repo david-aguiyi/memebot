@@ -39,3 +39,4 @@ Try accessing it directly:
 
 Or use Table Editor and create tables one by one (see TABLE_EDITOR_SETUP.md)
 
+

@@ -8,7 +8,7 @@ export class XAPIService {
 
   constructor() {
     this.simulationMode = env.X_SIMULATION_MODE || !env.X_API_KEY;
-    
+
     if (!this.simulationMode && env.X_API_KEY) {
       this.client = new TwitterApi({
         appKey: env.X_API_KEY,
@@ -37,7 +37,7 @@ export class XAPIService {
           content,
           contentLength: content.length,
         });
-        
+
         return {
           id: simulatedId,
           text: content,
@@ -118,7 +118,7 @@ export class XAPIService {
         };
       }
 
-      const rateLimit = await this.client.v2.rateLimitStatus();
+      const rateLimit = await (this.client as any).v2.rateLimitStatus();
       return rateLimit;
     } catch (error: any) {
       logger.error('Failed to get rate limit status', error);
@@ -132,4 +132,3 @@ export class XAPIService {
 }
 
 export default new XAPIService();
-

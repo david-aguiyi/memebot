@@ -115,3 +115,4 @@ DO UPDATE SET
 -- Success message
 SELECT 'Database schema created successfully! Admin account added.' as message;
 
+

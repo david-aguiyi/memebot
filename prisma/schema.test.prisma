@@ -1,20 +1,17 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Project {
   id              String   @id @default(uuid())
-  name            String   @db.VarChar(255)
-  baseDescription String   @db.Text
-  personaConfig   Json?
+  name            String
+  baseDescription String
+  personaConfig   String?
   postingEnabled  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -32,9 +29,9 @@ model ContextLayer {
   id          String   @id @default(uuid())
   projectId   String
   version     Int
-  content     String   @db.Text
-  metadata    Json?
-  status      String   @default("pending") @db.VarChar(50)
+  content     String
+  metadata    String?
+  status      String   @default("pending")
   approvedBy  BigInt?
   approvedAt  DateTime?
   createdAt   DateTime @default(now())
@@ -54,10 +51,10 @@ model PostSuggestion {
   id             String   @id @default(uuid())
   projectId      String
   contextVersion Int
-  content        String   @db.Text
-  variants       Json?
-  metadata       Json?
-  status         String   @default("pending") @db.VarChar(50)
+  content        String
+  variants       String?
+  metadata       String?
+  status         String   @default("pending")
   approvedBy     BigInt?
   createdAt      DateTime @default(now())
   approvedAt     DateTime?
@@ -76,9 +73,9 @@ model Post {
   projectId      String
   contextVersion Int
   suggestionId   String?
-  xTweetId       String?  @unique @db.VarChar(50)
-  content        String   @db.Text
-  status         String   @default("posted") @db.VarChar(50)
+  xTweetId       String?  @unique
+  content        String
+  status         String   @default("posted")
   postedAt       DateTime?
   createdAt      DateTime @default(now())
 
@@ -93,8 +90,8 @@ model Post {
 
 model Admin {
   telegramUserId BigInt  @id
-  username       String? @db.VarChar(255)
-  role           String  @default("admin") @db.VarChar(50)
+  username       String?
+  role           String  @default("admin")
   isActive       Boolean @default(true)
   createdAt      DateTime @default(now())
 
@@ -105,12 +102,13 @@ model Admin {
   @@map("admins")
 }
 
+
 model AuditLog {
   id           String   @id @default(uuid())
   adminId      BigInt
-  actionType   String   @db.VarChar(100)
-  actionData   Json?
-  resourceType String?  @db.VarChar(50)
+  actionType   String
+  actionData   String?
+  resourceType String?
   resourceId   String?
   createdAt    DateTime @default(now())
 
@@ -122,4 +120,3 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
-

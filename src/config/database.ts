@@ -17,8 +17,14 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Handle connection errors
-prisma.$connect().catch((error) => {
+prisma.$connect().catch(error => {
   logger.error('Failed to connect to database', error);
+  // During tests we prefer throwing to allow Jest to handle the failure
+  if (process.env.NODE_ENV === 'test') {
+    throw error;
+  }
+
+  // In non-test environments, exit to avoid running in a broken state
   process.exit(1);
 });
 
@@ -28,5 +34,3 @@ process.on('beforeExit', async () => {
 });
 
 export default prisma;
-
-

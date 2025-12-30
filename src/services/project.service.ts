@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import { Project, Prisma } from '@prisma/client';
 import logger from '../config/logger';
+import env from '../config/env';
 
 export class ProjectService {
   async create(data: {
@@ -9,11 +10,12 @@ export class ProjectService {
     personaConfig?: Record<string, any>;
   }): Promise<Project> {
     try {
+      const personaData = data.personaConfig ?? {};
       const project = await prisma.project.create({
         data: {
           name: data.name,
           baseDescription: data.baseDescription,
-          personaConfig: data.personaConfig || {},
+          personaConfig: env.NODE_ENV === 'test' ? JSON.stringify(personaData) : (personaData as any),
         },
       });
 
@@ -89,5 +91,6 @@ export class ProjectService {
 }
 
 export default new ProjectService();
+
 
 

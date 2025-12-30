@@ -106,3 +106,4 @@ Once all tables are created, we can:
 
 This method is visual and easier than SQL. Let me know when you've created the tables!
 
+

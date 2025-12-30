@@ -34,3 +34,4 @@ DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.hwzcxcyfizrvgkaghmjx.supab
 
 Then we can run the migrations!
 
+

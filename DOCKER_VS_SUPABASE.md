@@ -121,3 +121,4 @@ Both are free and sufficient for your testing needs!
 
 I recommend **Supabase** for now. Want me to guide you through the Supabase setup? It's really quick!
 
+
