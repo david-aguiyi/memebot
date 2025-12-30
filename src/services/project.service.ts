@@ -13,7 +13,12 @@ export class ProjectService {
         data: {
           name: data.name,
           baseDescription: data.baseDescription,
+<<<<<<< Updated upstream
           personaConfig: data.personaConfig || {},
+=======
+          personaConfig:
+            env.NODE_ENV === 'test' ? JSON.stringify(personaData) : (personaData as any),
+>>>>>>> Stashed changes
         },
       });
 
@@ -89,5 +94,8 @@ export class ProjectService {
 }
 
 export default new ProjectService();
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes

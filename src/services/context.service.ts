@@ -37,11 +37,7 @@ export class ContextService {
     }
   }
 
-  async approveContext(
-    projectId: string,
-    version: number,
-    adminId: bigint
-  ): Promise<ContextLayer> {
+  async approveContext(projectId: string, version: number, adminId: bigint): Promise<ContextLayer> {
     try {
       const contextLayer = await prisma.contextLayer.update({
         where: {
@@ -107,6 +103,21 @@ export class ContextService {
       orderBy: { version: 'asc' },
     });
 
+<<<<<<< Updated upstream
+=======
+    // Deserialize metadata for test DB which stores JSON as string
+    const parsed = contextLayers.map(c => {
+      if (env.NODE_ENV === 'test' && typeof (c as any).metadata === 'string') {
+        try {
+          return { ...c, metadata: JSON.parse((c as any).metadata) };
+        } catch {
+          return { ...c, metadata: null };
+        }
+      }
+      return c;
+    });
+
+>>>>>>> Stashed changes
     // Cache for 1 hour
     await redis.setex(cacheKey, 3600, JSON.stringify(contextLayers));
 
@@ -177,10 +188,7 @@ export class ContextService {
     return JSON.parse(cached);
   }
 
-  async updateEphemeralVibe(
-    projectId: string,
-    updates: Record<string, any>
-  ): Promise<void> {
+  async updateEphemeralVibe(projectId: string, updates: Record<string, any>): Promise<void> {
     const current = await this.getEphemeralVibe(projectId);
     const updated = { ...(current || {}), ...updates };
     await this.setEphemeralVibe(projectId, updated);
@@ -188,5 +196,8 @@ export class ContextService {
 }
 
 export default new ContextService();
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes

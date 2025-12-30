@@ -40,6 +40,7 @@ export class PostSuggestionService {
           projectId,
           contextVersion,
           content: primaryContent,
+<<<<<<< Updated upstream
           variants: otherVariants,
           status: requiresReview ? 'pending_review' : 'pending',
           metadata: {
@@ -49,6 +50,17 @@ export class PostSuggestionService {
               reasons: safetyCheck.reasons,
             },
           },
+=======
+          variants:
+            process.env.NODE_ENV === 'test'
+              ? JSON.stringify(otherVariants)
+              : (otherVariants as any),
+          status: requiresReview ? 'pending_review' : 'pending',
+          metadata:
+            process.env.NODE_ENV === 'test'
+              ? JSON.stringify(metadataPayload)
+              : (metadataPayload as any),
+>>>>>>> Stashed changes
         },
       });
 
