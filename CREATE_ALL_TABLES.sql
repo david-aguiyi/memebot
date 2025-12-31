@@ -131,3 +131,4 @@ CREATE INDEX IF NOT EXISTS "audit_logs_createdAt_idx" ON "audit_logs"("createdAt
 -- ============================================
 SELECT '✅ All tables created successfully! Admin account added (Telegram ID: 7290497391)' as message;
 
+

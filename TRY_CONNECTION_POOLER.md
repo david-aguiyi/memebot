@@ -28,3 +28,4 @@ We can also create the tables manually using Supabase's SQL Editor if connection
 
 Let me know which connection pooler string you get!
 
+

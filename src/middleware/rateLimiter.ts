@@ -13,7 +13,7 @@ export const rateLimiter = (options: RateLimitOptions) => {
   const {
     windowMs,
     maxRequests,
-    keyGenerator = (req) => `${req.ip}:${req.path}`,
+    keyGenerator = req => `${req.ip}:${req.path}`,
     skipSuccessfulRequests = false,
   } = options;
 
@@ -31,7 +31,7 @@ export const rateLimiter = (options: RateLimitOptions) => {
 
       if (count >= maxRequests) {
         logger.warn('Rate limit exceeded', { key, count, maxRequests });
-        return res.status(429).json({
+        res.status(429).json({
           success: false,
           error: {
             message: 'Too many requests, please try again later',
@@ -39,6 +39,7 @@ export const rateLimiter = (options: RateLimitOptions) => {
             retryAfter: Math.ceil(windowMs / 1000),
           },
         });
+        return;
       }
 
       // Add current request
@@ -70,5 +71,3 @@ export const rateLimiter = (options: RateLimitOptions) => {
     }
   };
 };
-
-

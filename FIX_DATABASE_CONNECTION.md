@@ -50,3 +50,4 @@ The pooler connection string should have:
 
 **Share the connection pooler string you see, and I'll update your .env file!**
 
+

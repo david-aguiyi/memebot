@@ -28,18 +28,26 @@ export class PostSuggestionService {
 
       // Use first variant as primary content
       const primaryContent = variants[0].content;
-      const otherVariants = variants.slice(1).map((v) => v.content);
+      const otherVariants = variants.slice(1).map(v => v.content);
 
       // Safety check
       const safetyCheck = await safetyService.checkContent(primaryContent);
       const requiresReview = await safetyService.requiresHumanReview(primaryContent);
 
       // Create suggestion with safety metadata
-      const suggestion = await prisma.postSuggestion.create({
+      const metadataPayload = {
+        safetyCheck: {
+          riskScore: safetyCheck.riskScore,
+          safe: safetyCheck.safe,
+          reasons: safetyCheck.reasons,
+        },
+      };
+
         data: {
           projectId,
           contextVersion,
           content: primaryContent,
+<<<<<<< HEAD
 <<<<<<< Updated upstream
           variants: otherVariants,
           status: requiresReview ? 'pending_review' : 'pending',
@@ -61,6 +69,33 @@ export class PostSuggestionService {
               ? JSON.stringify(metadataPayload)
               : (metadataPayload as any),
 >>>>>>> Stashed changes
+=======
+          variants: process.env.NODE_ENV === 'test' ? JSON.stringify(otherVariants) : (otherVariants as any),
+          status: requiresReview ? 'pending_review' : 'pending',
+          metadata: process.env.NODE_ENV === 'test' ? JSON.stringify(metadataPayload) : (metadataPayload as any),
+>>>>>>> test/sqlite-test-schema
+        },
+      });
+
+      logger.info('Post suggestion created', {
+        suggestionId: suggestion.id,
+        projectId,
+      });
+
+      return suggestion;
+    } catch (error) {
+      logger.error('Failed to generate post suggestions', error);
+      throw error;
+    }
+  }
+      const suggestion = await prisma.postSuggestion.create({
+        data: {
+          projectId,
+          contextVersion,
+          content: primaryContent,
+          variants: process.env.NODE_ENV === 'test' ? JSON.stringify(otherVariants) : (otherVariants as any),
+          status: requiresReview ? 'pending_review' : 'pending',
+          metadata: process.env.NODE_ENV === 'test' ? JSON.stringify(metadataPayload) : (metadataPayload as any),
         },
       });
 
@@ -144,4 +179,3 @@ export class PostSuggestionService {
 }
 
 export default new PostSuggestionService();
-

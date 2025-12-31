@@ -42,10 +42,7 @@ export class TelegramBot {
 
       // Create or update admin record
       if (userId) {
-        await adminService.findOrCreate(
-          BigInt(userId),
-          ctx.from?.username || undefined
-        );
+        await adminService.findOrCreate(BigInt(userId), ctx.from?.username || undefined);
       }
 
       return next();
@@ -54,17 +51,14 @@ export class TelegramBot {
 
   private setupCommands() {
     // Start command
-    this.bot.command('start', async (ctx) => {
+    this.bot.command('start', async ctx => {
       const userId = BigInt(ctx.from.id);
       await adminService.findOrCreate(userId, ctx.from.username);
-      await ctx.reply(
-        '👋 Welcome to MemeBot!\n\n' +
-        'Use /help to see all available commands.'
-      );
+      await ctx.reply('👋 Welcome to MemeBot!\n\n' + 'Use /help to see all available commands.');
     });
 
     // Help command
-    this.bot.command('help', async (ctx) => {
+    this.bot.command('help', async ctx => {
       const helpText = `
 📚 *MemeBot Commands*
 
@@ -92,77 +86,77 @@ Use inline buttons to interact with suggestions.
     });
 
     // Posting control commands
-    this.bot.command('posting_on', async (ctx) => {
+    this.bot.command('posting_on', async ctx => {
       await this.handlePostingToggle(ctx, true);
     });
 
-    this.bot.command('posting_off', async (ctx) => {
+    this.bot.command('posting_off', async ctx => {
       await this.handlePostingToggle(ctx, false);
     });
 
-    this.bot.command('posting_status', async (ctx) => {
+    this.bot.command('posting_status', async ctx => {
       await this.handlePostingStatus(ctx);
     });
 
     // Context management commands
-    this.bot.command('context_view', async (ctx) => {
+    this.bot.command('context_view', async ctx => {
       await this.handleContextView(ctx);
     });
 
-    this.bot.command('context_add', async (ctx) => {
+    this.bot.command('context_add', async ctx => {
       await this.handleContextAdd(ctx);
     });
 
-    this.bot.command('context_approve', async (ctx) => {
+    this.bot.command('context_approve', async ctx => {
       await this.handleContextApprove(ctx);
     });
 
-    this.bot.command('context_revert', async (ctx) => {
+    this.bot.command('context_revert', async ctx => {
       await this.handleContextRevert(ctx);
     });
 
     // Post suggestions
-    this.bot.command('suggest_post', async (ctx) => {
+    this.bot.command('suggest_post', async ctx => {
       await this.handleSuggestPost(ctx);
     });
 
     // Projects
-    this.bot.command('projects', async (ctx) => {
+    this.bot.command('projects', async ctx => {
       await this.handleProjectsList(ctx);
     });
   }
 
   private setupCallbacks() {
     // Handle inline button callbacks
-    this.bot.action(/^approve:(.+)$/, async (ctx) => {
+    this.bot.action(/^approve:(.+)$/, async ctx => {
       await ctx.answerCbQuery();
       const suggestionId = ctx.match[1];
       await this.handleSuggestionApprove(ctx, suggestionId);
     });
 
-    this.bot.action(/^reject:(.+)$/, async (ctx) => {
+    this.bot.action(/^reject:(.+)$/, async ctx => {
       await ctx.answerCbQuery();
       const suggestionId = ctx.match[1];
       await this.handleSuggestionReject(ctx, suggestionId);
     });
 
-    this.bot.action(/^edit:(.+)$/, async (ctx) => {
+    this.bot.action(/^edit:(.+)$/, async ctx => {
       await ctx.answerCbQuery('Edit functionality coming soon');
     });
 
-    this.bot.action(/^regenerate:(.+)$/, async (ctx) => {
+    this.bot.action(/^regenerate:(.+)$/, async ctx => {
       await ctx.answerCbQuery('Regenerate functionality coming soon');
     });
 
     // Context approval callbacks
-    this.bot.action(/^context_approve:(.+):(.+)$/, async (ctx) => {
+    this.bot.action(/^context_approve:(.+):(.+)$/, async ctx => {
       await ctx.answerCbQuery();
       const projectId = ctx.match[1];
       const version = parseInt(ctx.match[2]);
       await this.handleContextApproveAction(ctx, projectId, version);
     });
 
-    this.bot.action(/^context_reject:(.+):(.+)$/, async (ctx) => {
+    this.bot.action(/^context_reject:(.+):(.+)$/, async ctx => {
       await ctx.answerCbQuery();
       const projectId = ctx.match[1];
       const version = parseInt(ctx.match[2]);
@@ -171,10 +165,10 @@ Use inline buttons to interact with suggestions.
   }
 
   private setupErrorHandling() {
-    this.bot.catch((err, ctx) => {
+    this.bot.catch((err: any, ctx: Context) => {
       logger.error('Telegram bot error', {
-        error: err.message,
-        stack: err.stack,
+        error: (err as any)?.message ?? String(err),
+        stack: (err as any)?.stack,
         update: ctx.update,
       });
 
@@ -242,13 +236,12 @@ Use inline buttons to interact with suggestions.
       }
 
       const message = TelegramFormatter.formatContextSummary(
-        contextLayers.map((l) => ({ version: l.version, content: l.content }))
+        contextLayers.map(l => ({ version: l.version, content: l.content }))
       );
 
-      await ctx.reply(
-        `📝 *Active Context for ${project.name}:*\n\n${message}`,
-        { parse_mode: 'Markdown' }
-      );
+      await ctx.reply(`📝 *Active Context for ${project.name}:*\n\n${message}`, {
+        parse_mode: 'Markdown',
+      });
     } catch (error) {
       logger.error('Failed to view context', error);
       await ctx.reply('❌ Failed to view context.');
@@ -257,9 +250,10 @@ Use inline buttons to interact with suggestions.
 
   private async handleContextAdd(ctx: Context) {
     try {
-      const text = ctx.message && 'text' in ctx.message
-        ? ctx.message.text.replace('/context_add', '').trim()
-        : '';
+      const text =
+        ctx.message && 'text' in ctx.message
+          ? ctx.message.text.replace('/context_add', '').trim()
+          : '';
 
       if (!text) {
         await ctx.reply('❌ Please provide context text.\nUsage: /context_add <text>');
@@ -285,8 +279,8 @@ Use inline buttons to interact with suggestions.
 
       await ctx.reply(
         `✅ Context layer added (Version ${contextLayer.version})\n\n` +
-        `Status: ⏳ Pending approval\n\n` +
-        `Use /context_approve ${contextLayer.version} to approve.`
+          `Status: ⏳ Pending approval\n\n` +
+          `Use /context_approve ${contextLayer.version} to approve.`
       );
     } catch (error) {
       logger.error('Failed to add context', error);
@@ -296,9 +290,10 @@ Use inline buttons to interact with suggestions.
 
   private async handleContextApprove(ctx: Context) {
     try {
-      const text = ctx.message && 'text' in ctx.message
-        ? ctx.message.text.replace('/context_approve', '').trim()
-        : '';
+      const text =
+        ctx.message && 'text' in ctx.message
+          ? ctx.message.text.replace('/context_approve', '').trim()
+          : '';
 
       const version = parseInt(text);
       if (isNaN(version)) {
@@ -336,9 +331,10 @@ Use inline buttons to interact with suggestions.
 
   private async handleContextRevert(ctx: Context) {
     try {
-      const text = ctx.message && 'text' in ctx.message
-        ? ctx.message.text.replace('/context_revert', '').trim()
-        : '';
+      const text =
+        ctx.message && 'text' in ctx.message
+          ? ctx.message.text.replace('/context_revert', '').trim()
+          : '';
 
       const version = parseInt(text);
       if (isNaN(version)) {
@@ -355,11 +351,10 @@ Use inline buttons to interact with suggestions.
       const project = projects[0];
       await contextService.revertToVersion(project.id, version);
 
-      await auditService.log(
-        BigInt(ctx.from!.id),
-        'context_reverted',
-        { projectId: project.id, targetVersion: version }
-      );
+      await auditService.log(BigInt(ctx.from!.id), 'context_reverted', {
+        projectId: project.id,
+        targetVersion: version,
+      });
 
       await ctx.reply(`✅ Reverted to context version ${version}`);
     } catch (error) {
@@ -459,7 +454,7 @@ Use inline buttons to interact with suggestions.
 
       const xApiService = (await import('../services/x-api.service')).default;
       const isSimulation = xApiService.isSimulationMode();
-      
+
       let message = `✅ Post suggestion approved!\n\n${suggestion.content}\n\n`;
       if (willAutoPost) {
         if (isSimulation) {

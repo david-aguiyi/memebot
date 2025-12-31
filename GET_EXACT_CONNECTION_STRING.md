@@ -37,3 +37,4 @@ Supabase also provides a connection pooler which might work better. Try:
 
 Share the exact connection string you see, and I'll update everything!
 
+

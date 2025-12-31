@@ -2,6 +2,7 @@ import prisma from '../config/database';
 import redis from '../config/redis';
 import { ContextLayer } from '@prisma/client';
 import logger from '../config/logger';
+import env from '../config/env';
 
 export class ContextService {
   async addContext(
@@ -19,12 +20,29 @@ export class ContextService {
 
       const nextVersion = (maxVersion?.version || 0) + 1;
 
+      const dataMetadata = metadata || {};
+        data: {
+          projectId,
+          version: nextVersion,
+          content,
+          metadata: env.NODE_ENV === 'test' ? JSON.stringify(dataMetadata) : (dataMetadata as any),
+          status: 'pending',
+        },
+      });
+
+      logger.info('Context layer added', { projectId, version: nextVersion });
+      return contextLayer;
+    } catch (error) {
+      logger.error('Failed to add context layer', error);
+      throw error;
+    }
+  }
       const contextLayer = await prisma.contextLayer.create({
         data: {
           projectId,
           version: nextVersion,
           content,
-          metadata: metadata || {},
+          metadata: env.NODE_ENV === 'test' ? JSON.stringify(dataMetadata) : (dataMetadata as any),
           status: 'pending',
         },
       });
@@ -48,7 +66,7 @@ export class ContextService {
         },
         data: {
           status: 'approved',
-          approvedBy: adminId,
+          approvedBy: env.NODE_ENV === 'test' ? Number(adminId) : adminId,
           approvedAt: new Date(),
         },
       });
@@ -103,10 +121,15 @@ export class ContextService {
       orderBy: { version: 'asc' },
     });
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
     // Deserialize metadata for test DB which stores JSON as string
     const parsed = contextLayers.map(c => {
+=======
+    // Deserialize metadata for test DB which stores JSON as string
+    const parsed = contextLayers.map((c) => {
+>>>>>>> test/sqlite-test-schema
       if (env.NODE_ENV === 'test' && typeof (c as any).metadata === 'string') {
         try {
           return { ...c, metadata: JSON.parse((c as any).metadata) };
@@ -116,12 +139,18 @@ export class ContextService {
       }
       return c;
     });
+<<<<<<< HEAD
 
 >>>>>>> Stashed changes
     // Cache for 1 hour
     await redis.setex(cacheKey, 3600, JSON.stringify(contextLayers));
+=======
+>>>>>>> test/sqlite-test-schema
 
-    return contextLayers;
+    // Cache for 1 hour
+    await redis.setex(cacheKey, 3600, JSON.stringify(parsed));
+
+    return parsed as ContextLayer[];
   }
 
   async getContextHistory(projectId: string, limit = 10): Promise<ContextLayer[]> {
@@ -168,6 +197,12 @@ export class ContextService {
 
   private async invalidateContextCache(projectId: string): Promise<void> {
     const cacheKey = `context:project:${projectId}:active`;
+    if (env.NODE_ENV === 'test') {
+      // Don't block tests on Redis connectivity; fire-and-forget
+      redis.del(cacheKey).catch(() => undefined);
+      return;
+    }
+
     await redis.del(cacheKey);
   }
 
@@ -199,5 +234,9 @@ export default new ContextService();
 <<<<<<< Updated upstream
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> Stashed changes
+=======
+
+>>>>>>> test/sqlite-test-schema

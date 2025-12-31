@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import { Project, Prisma } from '@prisma/client';
 import logger from '../config/logger';
+import env from '../config/env';
 
 export class ProjectService {
   async create(data: {
@@ -9,16 +10,35 @@ export class ProjectService {
     personaConfig?: Record<string, any>;
   }): Promise<Project> {
     try {
-      const project = await prisma.project.create({
+      const personaData = data.personaConfig ?? {};
         data: {
           name: data.name,
           baseDescription: data.baseDescription,
+<<<<<<< HEAD
 <<<<<<< Updated upstream
           personaConfig: data.personaConfig || {},
 =======
           personaConfig:
             env.NODE_ENV === 'test' ? JSON.stringify(personaData) : (personaData as any),
 >>>>>>> Stashed changes
+=======
+          personaConfig: env.NODE_ENV === 'test' ? JSON.stringify(personaData) : (personaData as any),
+>>>>>>> test/sqlite-test-schema
+        },
+      });
+
+      logger.info('Project created', { projectId: project.id, name: project.name });
+      return project;
+    } catch (error) {
+      logger.error('Failed to create project', error);
+      throw error;
+    }
+  }
+      const project = await prisma.project.create({
+        data: {
+          name: data.name,
+          baseDescription: data.baseDescription,
+          personaConfig: env.NODE_ENV === 'test' ? JSON.stringify(personaData) : (personaData as any),
         },
       });
 
@@ -97,5 +117,9 @@ export default new ProjectService();
 <<<<<<< Updated upstream
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> Stashed changes
+=======
+
+>>>>>>> test/sqlite-test-schema
